@@ -1,32 +1,32 @@
-## License: Apache 2.0. See LICENSE file in root directory.
-## Copyright(c) 2015-2017 RealSense, Inc. All Rights Reserved.
+## 许可证：Apache 2.0。请参阅根目录中的 LICENSE 文件。
+## 版权所有(c) 2015-2017 RealSense, Inc. 保留所有权利。
 
 #####################################################
-## librealsense tutorial #1 - Accessing depth data ##
+## librealsense 教程 #1 - 访问深度数据 ##
 #####################################################
 
-# First import the library
+# 首先导入库
 import pyrealsense2 as rs
 
 try:
-    # Create a context object. This object owns the handles to all connected realsense devices
+    # 创建上下文对象。该对象拥有所有已连接 RealSense 设备的句柄
     pipeline = rs.pipeline()
 
-    # Configure streams
+    # 配置数据流
     config = rs.config()
     config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 
-    # Start streaming
+    # 开始数据流传输
     pipeline.start(config)
 
     while True:
-        # This call waits until a new coherent set of frames is available on a device
-        # Calls to get_frame_data(...) and get_frame_timestamp(...) on a device will return stable values until wait_for_frames(...) is called
+        # 此调用会等待，直到设备上有一组新的连贯帧可用
+        # 在调用 wait_for_frames(...) 之前，对设备调用 get_frame_data(...) 和 get_frame_timestamp(...) 会返回稳定的值
         frames = pipeline.wait_for_frames()
         depth = frames.get_depth_frame()
         if not depth: continue
 
-        # Print a simple text-based representation of the image, by breaking it into 10x20 pixel regions and approximating the coverage of pixels within one meter
+        # 将图像划分为 10×20 像素区域，并估算一米范围内像素的覆盖率，以打印简单的文本图像表示
         coverage = [0]*64
         for y in range(480):
             for x in range(640):
@@ -42,7 +42,7 @@ try:
                 print(line)
     exit(0)
 #except rs.error as e:
-#    # Method calls agaisnt librealsense objects may throw exceptions of type pylibrs.error
+#    # 对 librealsense 对象的方法调用可能会抛出 pylibrs.error 类型的异常
 #    print("pylibrs.error was thrown when calling %s(%s):\n", % (e.get_failed_function(), e.get_failed_args()))
 #    print("    %s\n", e.what())
 #    exit(1)

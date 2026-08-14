@@ -16,7 +16,7 @@ __desc__ = """
 This script demonstrates usage of Self-Calibration (UCAL) APIs
 """
 
-# mappings
+# 映射表
 occ_speed_map = {
     'very_fast': 0,
     'fast': 1,
@@ -51,8 +51,8 @@ def main(arguments=None):
         print('Device is not connected')
         sys.exit(1)
 
-    # Verify Preconditions:
-    # 1. The script is applicable for D400-series devices only
+    # 检查前置条件：
+    # 1. 本脚本仅适用于 D400 系列设备
     cam_name = device.get_info(rs.camera_info.name) if device.supports(rs.camera_info.name) else "Unrecognized camera"
     if device.supports(rs.camera_info.product_line):
         device_product_line = str(device.get_info(rs.camera_info.product_line))
@@ -60,24 +60,24 @@ def main(arguments=None):
             print(f'The example is intended for RealSense D400 Depth cameras, and is not', end =" ")
             print(f'applicable with {cam_name}')
             sys.exit(1)
-    # 2. The routine assumes USB3 connection type
-    #    In case of USB2 connection, the streaming profiles should be readjusted
+    # 2. 此流程假定使用 USB 3 连接
+    #    若使用 USB 2 连接，应重新调整数据流配置
     if device.supports(rs.camera_info.usb_type_descriptor):
         usb_type = device.get_info(rs.camera_info.usb_type_descriptor)
         if not usb_type.startswith('3.'):
             print('The script is designed to run with USB3 connection type.')
             print('In order to enable it with USB2.1 mode the fps rates for the Focal Length and Ground Truth calculation stages should be re-adjusted')
             sys.exit(1)
-    # 3. Advanced mode should be enabled
-    #    Some calibrations require changing of advanced mode presets (depends on calibration parameters/type)
+    # 3. 应启用高级模式
+    #    某些校准需要更改高级模式预设（取决于校准参数/类型）
     am_device = rs.rs400_advanced_mode(device)
     if not am_device or not am_device.is_enabled():
         print('Camera "Advanced Mode" must be enabled before calibrating.')
         sys.exit(1)
-        # To enable Advanced Mode use "am_device.toggle_advanced_mode(True)". Note - causes the camera to reset (set options will return to default)
+        # 使用 “am_device.toggle_advanced_mode(True)” 启用高级模式。注意：这会重置相机（已设置的选项将恢复默认值）。
 
 
-    # prepare device
+    # 准备设备
     depth_sensor = device.first_depth_sensor()
     depth_sensor.set_option(rs.option.emitter_enabled, 0)
     if depth_sensor.supports(rs.option.thermal_compensation):
@@ -90,7 +90,7 @@ def main(arguments=None):
 
     print("Starting UCAL...")
     try:
-        # The recomended sequence of procedures: On-Chip -> Focal Length -> Tare Calibration
+        # 建议的流程顺序：片上校准 → 焦距校准 → 标定校准
         run_on_chip_calibration(args.onchip_speed, args.onchip_scan)
         run_focal_length_calibration((args.target_width, args.target_height), args.focal_adjustment)
         run_tare_calibration(args.tare_accuracy, args.tare_scan, args.tare_gt, (args.target_width, args.target_height))
@@ -225,14 +225,14 @@ def run_tare_calibration(accuracy, scan, gt, target_size):
 
 
 def calculate_target_z(target_size):
-    number_of_images = 50 # The required number of frames is 10+
+    number_of_images = 50 # 所需帧数至少为 10 帧
     timeout_s = 30
 
     cfg = rs.config()
     cfg.enable_stream(rs.stream.infrared, 1, 1280, 720, rs.format.y8, 30)
 
     q = rs.frame_queue(capacity=number_of_images, keep_frames=True)
-    # Frame queues q2, q3 should be left empty. Provision for future enhancements.
+    # 帧队列 q2、q3 应保持为空，为后续扩展预留。
     q2 = rs.frame_queue(capacity=number_of_images, keep_frames=True)
     q3 = rs.frame_queue(capacity=number_of_images, keep_frames=True)
 

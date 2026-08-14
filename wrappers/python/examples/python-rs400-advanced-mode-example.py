@@ -5,7 +5,7 @@
 ##          rs400 advanced mode tutorial           ##
 #####################################################
 
-# First import the library
+# 首先导入库
 import pyrealsense2 as rs
 import time
 import json
@@ -28,19 +28,19 @@ try:
     advnc_mode = rs.rs400_advanced_mode(dev)
     print("Advanced mode is", "enabled" if advnc_mode.is_enabled() else "disabled")
 
-    # Loop until we successfully enable advanced mode
+# 循环尝试，直到成功启用高级模式
     while not advnc_mode.is_enabled():
         print("Trying to enable advanced mode...")
         advnc_mode.toggle_advanced_mode(True)
-        # At this point the device will disconnect and re-connect.
+# 此时设备会断开并重新连接。
         print("Sleeping for 5 seconds...")
         time.sleep(5)
-        # The 'dev' object will become invalid and we need to initialize it again
+# “dev”对象将失效，需要重新初始化。
         dev = find_device_that_supports_advanced_mode()
         advnc_mode = rs.rs400_advanced_mode(dev)
         print("Advanced mode is", "enabled" if advnc_mode.is_enabled() else "disabled")
 
-    # Get each control's current value
+# 获取各控制项的当前值
     print("Depth Control: \n", advnc_mode.get_depth_control())
     print("RSM: \n", advnc_mode.get_rsm())
     print("RAU Support Vector Control: \n", advnc_mode.get_rau_support_vector_control())
@@ -54,7 +54,7 @@ try:
     print("Auto Exposure Control: \n", advnc_mode.get_ae_control())
     print("Census: \n", advnc_mode.get_census())
 
-    #To get the minimum and maximum value of each control use the mode value:
+# 要获取每个控制项的最小值和最大值，可使用模式值：
     query_min_values_mode = 1
     query_max_values_mode = 2
     current_std_depth_control_group = advnc_mode.get_depth_control()
@@ -63,22 +63,22 @@ try:
     print("Depth Control Min Values: \n ", min_std_depth_control_group)
     print("Depth Control Max Values: \n ", max_std_depth_control_group)
 
-    # Set some control with a new (median) value
+# 为部分控制项设置新的（中位）值
     current_std_depth_control_group.scoreThreshA = int((max_std_depth_control_group.scoreThreshA - min_std_depth_control_group.scoreThreshA) / 2)
     advnc_mode.set_depth_control(current_std_depth_control_group)
     print("After Setting new value, Depth Control: \n", advnc_mode.get_depth_control())
 
-    # Serialize all controls to a Json string
+# 将全部控制项序列化为 JSON 字符串
     serialized_string = advnc_mode.serialize_json()
     print("Controls as JSON: \n", serialized_string)
     as_json_object = json.loads(serialized_string)
 
-    # We can also load controls from a json string
-    # For Python 2, the values in 'as_json_object' dict need to be converted from unicode object to utf-8
+# 也可以从 JSON 字符串加载控制项
+# 对 Python 2，“as_json_object”字典中的值需从 Unicode 对象转换为 UTF-8
     if type(next(iter(as_json_object))) != str:
         as_json_object = {k.encode('utf-8'): v.encode("utf-8") for k, v in as_json_object.items()}
-    # The C++ JSON parser requires double-quotes for the json object so we need
-    # to replace the single quote of the pythonic json to double-quotes
+# C++ JSON 解析器要求 JSON 对象使用双引号，因此需要
+# 将 Python 风格 JSON 中的单引号替换为双引号
     json_string = str(as_json_object).replace("'", '\"')
     advnc_mode.load_json(json_string)
 

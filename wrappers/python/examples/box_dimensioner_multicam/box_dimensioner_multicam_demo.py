@@ -1,23 +1,21 @@
 ###########################################################################################################################
-##                      License: Apache 2.0. See LICENSE file in root directory.                                         ##
+##                          许可证：Apache 2.0。请参阅根目录中的 LICENSE 文件。                                        ##
 ###########################################################################################################################
-##                  Simple Box Dimensioner with multiple cameras: Main demo file                                         ##
+##                            多相机简单箱体尺寸测量：主示例文件                                                        ##
 ###########################################################################################################################
-## Workflow description:                                                                                                 ##
-## 1. Place the calibration chessboard object into the field of view of all the realsense cameras.                       ##
-##    Update the chessboard parameters in the script in case a different size is chosen.                                 ##
-## 2. Start the program.                                                                                                 ##
-## 3. Allow calibration to occur and place the desired object ON the calibration object when the program asks for it.    ##
-##    Make sure that the object to be measured is not bigger than the calibration object in length and width.            ##
-## 4. The length, width and height of the bounding box of the object is then displayed in millimeters.                   ##
+## 工作流程：                                                                                                            ##
+## 1. 将标定棋盘置于所有 RealSense 相机的视野中；若使用其他尺寸，请更新脚本中的棋盘参数。                              ##
+## 2. 启动程序。                                                                                                        ##
+## 3. 等待标定完成；程序提示时，将待测物体放在标定板上。物体的长和宽不得超过标定板。                                   ##
+## 4. 程序将以毫米显示物体包围盒的长、宽、高。                                                                          ##
 ###########################################################################################################################
 
-# Import RealSense, OpenCV and NumPy
+# 导入 RealSense、OpenCV 和 NumPy
 import pyrealsense2 as rs
 import cv2
 import numpy as np
 
-# Import helper functions and classes written to wrap the RealSense, OpenCV and Kabsch Calibration usage
+# 导入封装 RealSense、OpenCV 和 Kabsch 校准操作的辅助函数与类
 from collections import defaultdict
 from realsense_device_manager import DeviceManager
 from calibration_kabsch import PoseEstimation
@@ -26,7 +24,7 @@ from measurement_task import calculate_boundingbox_points, calculate_cumulative_
 
 def run_demo():
 
-	# Define some constants
+# 定义常量
 	resolution_width = 1280 # pixels
 	resolution_height = 720 # pixels
 	frame_rate = 15  # fps
@@ -38,17 +36,17 @@ def run_demo():
 	square_size = 0.0253 # meters
 
 	try:
-		# Enable the streams from all the intel realsense devices
+# 启用所有 Intel RealSense 设备的数据流
 		rs_config = rs.config()
 		rs_config.enable_stream(rs.stream.depth, resolution_width, resolution_height, rs.format.z16, frame_rate)
 		rs_config.enable_stream(rs.stream.infrared, 1, resolution_width, resolution_height, rs.format.y8, frame_rate)
 		rs_config.enable_stream(rs.stream.color, resolution_width, resolution_height, rs.format.bgr8, frame_rate)
 
-		# Use the device manager class to enable the devices and get the frames
+# 使用设备管理器类启用设备并获取帧
 		device_manager = DeviceManager(rs.context(), rs_config)
 		device_manager.enable_all_devices()
 
-		# Allow some frames for the auto-exposure controller to stablise
+# 预留若干帧，使自动曝光控制器稳定下来
 		for frame in range(dispose_frames_for_stablisation):
 			frames = device_manager.poll_frames()
 
@@ -59,13 +57,13 @@ def run_demo():
 		For this purpose, a chessboard printout for use with opencv based calibration process is needed.
 
 		"""
-		# Get the intrinsics of the realsense device
+# 获取 RealSense 设备内参
 		intrinsics_devices = device_manager.get_device_intrinsics(frames)
 
-                # Set the chessboard parameters for calibration
+# 设置用于校准的棋盘参数
 		chessboard_params = [chessboard_height, chessboard_width, square_size]
 
-		# Estimate the pose of the chessboard in the world coordinate using the Kabsch Method
+# 使用 Kabsch 方法估计棋盘在世界坐标系中的位姿
 		calibrated_device_count = 0
 		while calibrated_device_count < len(device_manager._available_devices):
 			frames = device_manager.poll_frames()
@@ -80,7 +78,7 @@ def run_demo():
 				else:
 					calibrated_device_count += 1
 
-		# Save the transformation object for all devices in an array to use for measurements
+# 将所有设备的变换对象保存到数组中，用于测量
 		transformation_devices={}
 		chessboard_points_cumulative_3d = np.array([-1,-1,-1]).transpose()
 		for device_info in device_manager._available_devices:
@@ -90,8 +88,8 @@ def run_demo():
 			points3D = transformation_devices[device].apply_transformation(points3D)
 			chessboard_points_cumulative_3d = np.column_stack( (chessboard_points_cumulative_3d,points3D) )
 
-		# Extract the bounds between which the object's dimensions are needed
-		# It is necessary for this demo that the object's length and breath is smaller than that of the chessboard
+# 提取用于计算物体尺寸的边界范围
+# 本示例要求物体的长和宽小于棋盘的长和宽
 		chessboard_points_cumulative_3d = np.delete(chessboard_points_cumulative_3d, 0, 1)
 		roi_2D = get_boundary_corners_2D(chessboard_points_cumulative_3d)
 
@@ -105,33 +103,33 @@ def run_demo():
 
                 """
 
-		# Enable the emitter of the devices
+# 启用设备的发射器
 		device_manager.enable_emitter(True)
 
-		# Load the JSON settings file in order to enable High Accuracy preset for the realsense
+# 加载 JSON 设置文件，以启用 RealSense 的高精度预设
 		device_manager.load_settings_json("./HighResHighAccuracyPreset.json")
 
-		# Get the extrinsics of the device to be used later
+# 获取设备外参，供后续使用
 		extrinsics_devices = device_manager.get_depth_to_color_extrinsics(frames)
 
-		# Get the calibration info as a dictionary to help with display of the measurements onto the color image instead of infra red image
+# 以字典形式获取校准信息，以便将测量结果显示在彩色图像而非红外图像上
 		calibration_info_devices = defaultdict(list)
 		for calibration_info in (transformation_devices, intrinsics_devices, extrinsics_devices):
 			for key, value in calibration_info.items():
 				calibration_info_devices[key].append(value)
 
-		# Continue acquisition until terminated with Ctrl+C by the user
+# 持续采集，直到用户按 Ctrl+C 终止
 		while 1:
-			 # Get the frames from all the devices
+# 获取所有设备的帧
 				frames_devices = device_manager.poll_frames()
 
-				# Calculate the pointcloud using the depth frames from all the devices
+# 使用所有设备的深度帧计算点云
 				point_cloud = calculate_cumulative_pointcloud(frames_devices, calibration_info_devices, roi_2D)
 
-				# Get the bounding box for the pointcloud in image coordinates of the color imager
+# 在彩色成像器坐标系中获取点云的包围盒
 				bounding_box_points_color_image, length, width, height = calculate_boundingbox_points(point_cloud, calibration_info_devices )
 
-				# Draw the bounding box points on the color image and visualise the results
+# 在彩色图像上绘制包围盒顶点并显示结果
 				visualise_measurements(frames_devices, bounding_box_points_color_image, length, width, height)
 
 	except KeyboardInterrupt:
